@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot name="the_8th_leg">
+
+    <!-- World link-->
+    <link name="world"/>
+
+    <!-- ROOT/Link 1 -->
+    <!-- mass=0.1kg, r=0.1m, h=0.02m -->
+    <!-- ixx=iyy=(1/12)*0.1*(3*0.01+0.0004)=0.000253 -->
+    <!-- izz=(1/2)*0.1*0.01=0.0005 -->
+    <link name="base_link">
+        <visual>
+            <origin xyz="0 0 0.01"/>
+            <geometry>
+                <cylinder radius="0.1" length="0.02"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.01"/>
+            <geometry>
+                <cylinder radius="0.1" length="0.02"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <origin xyz="0 0 0.01"/>
+            <mass value="0.1"/>
+            <inertia ixx="0.000253" iyy="0.000253" izz="0.0005"
+                     ixy="0" ixz="0" iyz="0"/>
+        </inertial>
+    </link>
+
+    <!-- Joint 0 : World link to Base link-->
+    <joint name="world_joint" type="fixed">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0.0 0.0 0.0"/>
+    </joint>
+
+    <!-- JOINT 1 -->
+    <joint name="base_rotate_joint" type="revolute">
+        <parent link="base_link"/>
+        <child link="link_2"/>
+        <origin xyz="0 0 0.02"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-3.14159" upper="3.14159"
+               effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- Link 2 -->
+    <!-- mass=1.0kg, r=0.08m, h=0.15m -->
+    <!-- ixx=iyy=(1/12)*1.0*(3*0.0064+0.0225)=0.003475 -->
+    <!-- izz=(1/2)*1.0*0.0064=0.0032 -->
+    <link name="link_2">
+        <visual>
+            <origin xyz="0 0 0.075"/>
+            <geometry>
+                <cylinder radius="0.08" length="0.15"/>
+            </geometry>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.075"/>
+            <geometry>
+                <cylinder radius="0.08" length="0.15"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <origin xyz="0 0 0.075"/>
+            <mass value="1.0"/>
+            <inertia ixx="0.003475" iyy="0.003475" izz="0.0032"
+                     ixy="0" ixz="0" iyz="0"/>
+        </inertial>
+    </link>
+
+</robot>

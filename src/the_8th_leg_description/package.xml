@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+	<name>the_8th_leg_description</name>
+	<version>0.0.1</version>
+	<description>URDF for the 8th leg robot arm</description>
+	<maintainer email="wwonjunnlee@gmail.com">Juneeth</maintainer>
+	<license>MIT</license>
+	<buildtool_depend>ament_cmake</buildtool_depend>
+
+	<export>
+		<build_type>ament_cmake</build_type>
+	</export>
+</package>
+
