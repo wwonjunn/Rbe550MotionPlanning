@@ -3,6 +3,8 @@ project(the_8th_leg_bringup)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch rviz
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_package()

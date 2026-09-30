@@ -1,22 +1,27 @@
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
-from launch_ros.actions import Node
-import os
 from launch.actions import TimerAction
+from launch_ros.actions import Node
+import xacro
+import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    
-    urdf_file = os.path.join(
+
+    xacro_file = os.path.join(
         get_package_share_directory('the_8th_leg_description'),
         'urdf',
-        'the_8th_leg.urdf'
+        'the_8th_leg.urdf.xacro'
     )
-    with open(urdf_file, 'r') as f:
-        urdf_string = f.read()
+    urdf_string = xacro.process_file(xacro_file).toxml()
+
+    rviz_config = os.path.join(
+        get_package_share_directory('the_8th_leg_bringup'),
+        'rviz',
+        'display.rviz'
+    )
 
     return LaunchDescription([
-        
+
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -36,9 +41,10 @@ def generate_launch_description():
                 Node(
                     package='rviz2',
                     executable='rviz2',
+                    arguments=['-d', rviz_config],
                     output='screen'
                 )
             ]
-        )
+        ),
 
-])
+    ])

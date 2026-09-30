@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<robot name="the_8th_leg" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- Properties -->
+    <xacro:property name="link1_baseLength" value="0.02"/>
+    <xacro:property name="link2_shoulderLength" value="0.09"/>
+    <xacro:property name="link3_upperArmLength" value="0.20"/>
+    <xacro:property name="link4_lowerArmLength" value="0.20"/>
+    <xacro:property name="link5_wristPitchLength" value="0.05"/>
+    <xacro:property name="link6_wristRollLength" value="0.04"/>
+    <xacro:property name="link7_wristYawLength" value="0.04"/>
+
+    <xacro:property name="link1_baseRadius" value="0.1"/>
+    <xacro:property name="link2_shoulderRadius" value="0.05"/>
+    <xacro:property name="link3_upperArmRadius" value="0.04"/>
+    <xacro:property name="link4_lowerArmRadius" value="0.035"/>
+    <xacro:property name="link5_wristPitchRadius" value="0.03"/>
+    <xacro:property name="link6_wristRollRadius" value="0.03"/>
+    <xacro:property name="link7_wristYawRadius" value="0.025"/>
+
+    <xacro:property name="simplifiedMass" value="1"/>
+
+    <!-- Colors so you can actually see the joints rotate -->
+    <material name="grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+    </material>
+    <material name="orange">
+        <color rgba="1.0 0.5 0.0 1.0"/>
+    </material>
+    <material name="blue">
+        <color rgba="0.2 0.4 0.9 1.0"/>
+    </material>
+
+    <!-- Macro -->
+    <xacro:macro name="cyl_link" params="name radius length mass material">
+
+        <xacro:property name="ixx" value="${(1/12) * mass * (3*radius**2 + length**2)}"/>
+        <xacro:property name="izz" value="${0.5 * mass * radius**2}"/>
+
+        <link name="${name}">
+            <visual>
+                <origin xyz="0 0 ${length/2}"/>
+                <geometry>
+                    <cylinder radius="${radius}" length="${length}"/>
+                </geometry>
+                <material name="${material}"/>
+            </visual>
+            <collision>
+                <origin xyz="0 0 ${length/2}"/>
+                <geometry>
+                     <cylinder radius="${radius}" length="${length}"/>
+                </geometry>
+            </collision>
+            <inertial>
+                <origin xyz="0 0 ${length/2}"/>
+                <mass value="${mass}"/>
+                <inertia ixx="${ixx}" iyy="${ixx}" izz="${izz}" ixy="0" ixz="0" iyz="0"/>
+            </inertial>
+        </link>
+    </xacro:macro>
+
+    <!-- Calls -->
+    <link name="world"/>
+
+    <xacro:cyl_link name="base_link" radius="${link1_baseRadius}"       length="${link1_baseLength}"       mass="${simplifiedMass}" material="grey"/>
+    <xacro:cyl_link name="link_2"    radius="${link2_shoulderRadius}"   length="${link2_shoulderLength}"   mass="${simplifiedMass}" material="orange"/>
+    <xacro:cyl_link name="link_3"    radius="${link3_upperArmRadius}"   length="${link3_upperArmLength}"   mass="${simplifiedMass}" material="blue"/>
+    <xacro:cyl_link name="link_4"    radius="${link4_lowerArmRadius}"   length="${link4_lowerArmLength}"   mass="${simplifiedMass}" material="orange"/>
+    <xacro:cyl_link name="link_5"    radius="${link5_wristPitchRadius}" length="${link5_wristPitchLength}" mass="${simplifiedMass}" material="blue"/>
+    <xacro:cyl_link name="link_6"    radius="${link6_wristRollRadius}"  length="${link6_wristRollLength}"  mass="${simplifiedMass}" material="orange"/>
+    <xacro:cyl_link name="link_7"    radius="${link7_wristYawRadius}"   length="${link7_wristYawLength}"   mass="${simplifiedMass}" material="blue"/>
+
+    <!-- Joint 0 : World link to Base link -->
+    <joint name="world_joint" type="fixed">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0"/>
+    </joint>
+
+    <!-- JOINT 1 : Base yaw, CCW from above -->
+    <joint name="base_yaw_joint" type="revolute">
+        <parent link="base_link"/>
+        <child link="link_2"/>
+        <origin xyz="0 0 ${link1_baseLength}"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="${-pi}" upper="${pi}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- JOINT 2 : Shoulder pitch, + tips forward toward +X -->
+    <joint name="shoulder_pitch_joint" type="revolute">
+        <parent link="link_2"/>
+        <child link="link_3"/>
+        <origin xyz="0 0 ${link2_shoulderLength}"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="${radians(-108)}" upper="${radians(114)}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- JOINT 3 : Elbow pitch, + folds forward toward +X -->
+    <joint name="elbow_pitch_joint" type="revolute">
+        <parent link="link_3"/>
+        <child link="link_4"/>
+        <origin xyz="0 0 ${link3_upperArmLength}"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="${radians(-33)}" upper="${radians(150)}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- JOINT 4 : Wrist pitch, + tips forward toward +X -->
+    <joint name="wrist_pitch_joint" type="revolute">
+        <parent link="link_4"/>
+        <child link="link_5"/>
+        <origin xyz="0 0 ${link4_lowerArmLength}"/>
+        <axis xyz="0 1 0"/>
+        <limit lower="${radians(-100)}" upper="${radians(123)}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- JOINT 5 : Wrist roll, spins about its own long axis (full rotation ok) -->
+    <joint name="wrist_roll_joint" type="revolute">
+        <parent link="link_5"/>
+        <child link="link_6"/>
+        <origin xyz="0 0 ${link5_wristPitchLength}"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="${-pi}" upper="${pi}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+    <!-- JOINT 6 : Wrist yaw. X-axis bend, perpendicular to wrist pitch in the tool frame.
+         Third orientation DOF after roll. + toward -Y -->
+    <joint name="wrist_yaw_joint" type="revolute">
+        <parent link="link_6"/>
+        <child link="link_7"/>
+        <origin xyz="0 0 ${link6_wristRollLength}"/>
+        <axis xyz="1 0 0"/>
+        <limit lower="${radians(-90)}" upper="${radians(90)}" effort="10.0" velocity="1.0"/>
+    </joint>
+
+</robot>
