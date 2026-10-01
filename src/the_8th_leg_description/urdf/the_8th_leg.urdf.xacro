@@ -20,6 +20,11 @@
 
     <xacro:property name="simplifiedMass" value="1"/>
 
+    <xacro:property name="joint_effort"   value="50.0"/>
+    <xacro:property name="joint_velocity" value="1.0"/>
+    <xacro:property name="joint_damping"  value="0.5"/>
+
+
     <!-- Colors so you can actually see the joints rotate -->
     <material name="grey">
         <color rgba="0.5 0.5 0.5 1.0"/>
@@ -83,7 +88,8 @@
         <child link="link_2"/>
         <origin xyz="0 0 ${link1_baseLength}"/>
         <axis xyz="0 0 1"/>
-        <limit lower="${-pi}" upper="${pi}" effort="10.0" velocity="1.0"/>
+        <limit lower="${-pi}" upper="${pi}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
     <!-- JOINT 2 : Shoulder pitch, + tips forward toward +X -->
@@ -92,7 +98,8 @@
         <child link="link_3"/>
         <origin xyz="0 0 ${link2_shoulderLength}"/>
         <axis xyz="0 1 0"/>
-        <limit lower="${radians(-108)}" upper="${radians(114)}" effort="10.0" velocity="1.0"/>
+        <limit lower="${radians(-108)}" upper="${radians(114)}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
     <!-- JOINT 3 : Elbow pitch, + folds forward toward +X -->
@@ -101,7 +108,8 @@
         <child link="link_4"/>
         <origin xyz="0 0 ${link3_upperArmLength}"/>
         <axis xyz="0 1 0"/>
-        <limit lower="${radians(-33)}" upper="${radians(150)}" effort="10.0" velocity="1.0"/>
+        <limit lower="${radians(-33)}" upper="${radians(150)}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
     <!-- JOINT 4 : Wrist pitch, + tips forward toward +X -->
@@ -110,7 +118,8 @@
         <child link="link_5"/>
         <origin xyz="0 0 ${link4_lowerArmLength}"/>
         <axis xyz="0 1 0"/>
-        <limit lower="${radians(-100)}" upper="${radians(123)}" effort="10.0" velocity="1.0"/>
+        <limit lower="${radians(-100)}" upper="${radians(123)}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
     <!-- JOINT 5 : Wrist roll, spins about its own long axis (full rotation ok) -->
@@ -119,7 +128,8 @@
         <child link="link_6"/>
         <origin xyz="0 0 ${link5_wristPitchLength}"/>
         <axis xyz="0 0 1"/>
-        <limit lower="${-pi}" upper="${pi}" effort="10.0" velocity="1.0"/>
+        <limit lower="${-pi}" upper="${pi}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
     <!-- JOINT 6 : Wrist yaw. X-axis bend, perpendicular to wrist pitch in the tool frame.
@@ -129,7 +139,8 @@
         <child link="link_7"/>
         <origin xyz="0 0 ${link6_wristRollLength}"/>
         <axis xyz="1 0 0"/>
-        <limit lower="${radians(-90)}" upper="${radians(90)}" effort="10.0" velocity="1.0"/>
+        <limit lower="${radians(-90)}" upper="${radians(90)}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+        <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
 
 </robot>

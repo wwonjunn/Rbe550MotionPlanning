@@ -22,11 +22,30 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Spawn the robot into Gazebo from the expanded xacro
+        # Publish robot_description
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            parameters=[{
+                'robot_description': urdf_string,
+                'use_sim_time': True
+            }],
+            output='screen'
+        ),
+
+        # Spawn the robot from the robot_description topic 
         Node(
             package='ros_gz_sim',
             executable='create',
-            arguments=['-string', urdf_string, '-name', 'the_8th_leg'],
+            arguments=['-topic', 'robot_description', '-name', 'the_8th_leg'],
+            output='screen'
+        ),
+
+        # Bridge Gazebo's clock into ROS as /clock
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
             output='screen'
         ),
 
