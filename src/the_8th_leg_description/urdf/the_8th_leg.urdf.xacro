@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <robot name="the_8th_leg" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:arg name="hardware_plugin" default="gz_ros2_control/GazeboSimSystem"/>
 
     <!-- Properties -->
     <xacro:property name="link1_baseLength" value="0.02"/>
@@ -142,5 +143,34 @@
         <limit lower="${radians(-90)}" upper="${radians(90)}" effort="${joint_effort}" velocity="${joint_velocity}"/>
         <dynamics damping="${joint_damping}" friction="0.0"/>
     </joint>
+    
+    <!-- ros2_control: interfaces per joint -->
+    <xacro:macro name="joint_ifaces" params="name initial">
+        <joint name="${name}">
+            <command_interface name="position"/>
+            <state_interface name="position">
+                <param name="initial_value">${initial}</param>
+            </state_interface>
+            <state_interface name="velocity"/>
+        </joint>
+    </xacro:macro>
 
+    <ros2_control name="the_8th_leg_system" type="system">
+        <hardware>
+            <plugin>$(arg hardware_plugin)</plugin>
+        </hardware>
+        <xacro:joint_ifaces name="base_yaw_joint"       initial="0.0"/>
+        <xacro:joint_ifaces name="shoulder_pitch_joint" initial="0.4"/>
+        <xacro:joint_ifaces name="elbow_pitch_joint"    initial="1.0"/>
+        <xacro:joint_ifaces name="wrist_pitch_joint"    initial="0.6"/>
+        <xacro:joint_ifaces name="wrist_roll_joint"     initial="0.0"/>
+        <xacro:joint_ifaces name="wrist_yaw_joint"      initial="0.0"/>
+    </ros2_control>
+
+    <!-- Gazebo loads ros2_control and starts the controller manager -->
+    <gazebo>
+        <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+            <parameters>$(find the_8th_leg_bringup)/config/controllers.yaml</parameters>
+        </plugin>
+    </gazebo>
 </robot>
