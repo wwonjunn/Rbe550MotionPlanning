@@ -9,7 +9,9 @@
 
 	<exec_depend>the_8th_leg_description</exec_depend>
 	<exec_depend>ros_gz</exec_depend>
-
+	<exec_depend>moveit_configs_utils</exec_depend>
+	<exec_depend>the_8th_leg_moveit_config</exec_depend>
+	
 	<export>
 		<build_type>ament_cmake</build_type>
 	</export>

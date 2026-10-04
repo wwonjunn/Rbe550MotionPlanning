@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: the_8th_leg_description
+    relative_path: urdf/the_8th_leg.urdf.xacro
+  srdf:
+    relative_path: config/the_8th_leg.srdf
+  package_settings:
+    author_name: Won Jun Lee
+    author_email: wwonjunnlee@gmail.com
+    generated_timestamp: 1791122173
