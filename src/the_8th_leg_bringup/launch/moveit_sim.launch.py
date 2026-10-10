@@ -1,13 +1,14 @@
 from launch import LaunchDescription
 from launch.actions import RegisterEventHandler
 from launch.event_handlers import OnProcessIO
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 import os
 from ament_index_python.packages import get_package_share_directory
 
+# Call with: QT_QPA_PLATFORM=xcb ros2 launch the_8th_leg_bringup moveit_sim.launch.py
 def generate_launch_description():
 
     bringup_dir = get_package_share_directory('the_8th_leg_bringup')
@@ -50,9 +51,20 @@ def generate_launch_description():
         output='screen'
     )
 
+    # Baseline obstacle: same box every launch
+    add_box = ExecuteProcess(
+        cmd=['ros2', 'topic', 'pub', '--once', '/planning_scene',
+             'moveit_msgs/msg/PlanningScene',
+             '{is_diff: true, world: {collision_objects: [{header: {frame_id: world}, id: box1, '
+             'primitives: [{type: 1, dimensions: [0.1, 0.1, 0.3]}], '
+             'primitive_poses: [{position: {x: 0.31, y: 0.21, z: 0.25}, orientation: {w: 1.0}}], '
+             'operation: 0}]}}'],
+        output='screen'
+    )
+
     def start_rviz_when_ready(event):
         if b'You can start planning now' in event.text:
-            return [rviz]
+            return [rviz, add_box]
         
     return LaunchDescription([
     sim,
