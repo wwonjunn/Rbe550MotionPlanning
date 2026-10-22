@@ -124,7 +124,7 @@ std::vector<int> nearbyNodes (const Config& newNode, const std::vector<TreeNode>
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv); // reading launch args
   // create node for param, makes sure it takes input params
-  auto node = std::make_shared<rclcpp::Node>("rrt_planner",
+  auto node = std::make_shared<rclcpp::Node>("rrt_planner_star",
       rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true));
  
   // Spin in the background so MoveIt's monitors can receive messages
@@ -281,6 +281,22 @@ int main(int argc, char** argv) {
     }
     return minCostIdx;
   };
+
+  auto rewire = [&](const Config& newNode, std::vector<TreeNode>& tree, const std::vector<int>& neighbors, const double checkRes)-> void {
+    // rewire surrounding nodes for better optimization
+    double potentialCost {};
+    int newIdx {static_cast<int>(tree.size()) - 1}; //idx of new Node
+
+    for(size_t i {0}; i < neighbors.size(); i++) {
+      int n {neighbors[i]};
+      potentialCost = tree[newIdx].cost + getDist(newNode, tree[n].q);
+      if (potentialCost < tree[n].cost && edgeValid(newNode, tree[n].q, checkRes)) {
+        tree[n].parent = newIdx; // new parent is new Node
+        tree[n].cost = potentialCost;
+      }
+    }
+    return;
+  };
   // Constants (mostly tunable)
   const double stepSize {0.5}; // furthest dist (rad) it'll plot next pose
   const double goalBias {0.05}; // use goal pose how often
@@ -302,6 +318,8 @@ int main(int argc, char** argv) {
     Config newNode {};
     int idx {};
     bool reached {false};
+    std::vector<int> neighbors {};
+    int closestNeighbor {};
 
     for (int iter{0}; iter<maxIter; iter++){
       randNode = sample(rng, bounds, goal, goalBias); // random pose gen
@@ -309,8 +327,11 @@ int main(int argc, char** argv) {
       newNode = steer(tree[idx].q, randNode, stepSize); // random pose -> pose to add
   
       if (!edgeValid(newNode, tree[idx].q, checkRes)){continue;}
-      else {
-        tree.push_back({newNode, idx, tree[idx].cost + getDist(newNode, tree[idx].q), fk(newNode)});
+      else { // find closest, put that in, rewire neighbors
+        neighbors = nearbyNodes(newNode, tree, radius);
+        closestNeighbor = bestParent(newNode, neighbors, tree, idx, checkRes);
+        tree.push_back({newNode, closestNeighbor, tree[closestNeighbor].cost + getDist(newNode, tree[closestNeighbor].q), fk(newNode)});
+        rewire(newNode, tree, neighbors, checkRes);
       }
       if (tree.size() % 50 == 0) {publishTree();}
       if (getDist(goal, newNode) <= golTol) {
