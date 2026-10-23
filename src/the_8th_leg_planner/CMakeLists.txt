@@ -18,15 +18,31 @@ target_include_directories(rrt_planner PUBLIC
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 target_compile_features(rrt_planner PUBLIC c_std_17 cxx_std_20)  # Require C17 and C++20
 target_link_libraries(
-  rrt_planner
-  ${rclcpp_TARGETS}
-  ${moveit_core_TARGETS}
-  ${moveit_ros_planning_TARGETS}
-  ${visualization_msgs_TARGETS}
+rrt_planner
+${rclcpp_TARGETS}
+${moveit_core_TARGETS}
+${moveit_ros_planning_TARGETS}
+${visualization_msgs_TARGETS}
 )
 
+add_executable(rrt_planner_star src/rrt_planner_star.cpp)
+target_include_directories(rrt_planner_star PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
+target_compile_features(rrt_planner_star PUBLIC c_std_17 cxx_std_20)  # Require C17 and C++20
+target_link_libraries(
+rrt_planner_star
+${rclcpp_TARGETS}
+${moveit_core_TARGETS}
+${moveit_ros_planning_TARGETS}
+${visualization_msgs_TARGETS}
+)
+
+install(TARGETS rrt_planner rrt_planner_star
+DESTINATION lib/${PROJECT_NAME})
+
 install(TARGETS rrt_planner
-  DESTINATION lib/${PROJECT_NAME})
+DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -33,6 +33,9 @@ struct RunResult {
   double cost;
   size_t waypoints;
   double ms;
+  double firstMs;      
+  double firstCost;    
+  size_t goalCount; 
 };
  
 Config sample(std::mt19937& rng, const std::vector<std::pair<double, double>>& bounds, const Config& goal, double goal_bias) {
@@ -174,9 +177,11 @@ int main(int argc, char** argv) {
     bounds.emplace_back(b.min_position_, b.max_position_);
   }
  
-  // Start = current state. Goal = goal_a hard coded in SRDF
+  // Start = home hard coded in SRDF (not current state, so benchmarks are repeatable). Goal = goal_a hard coded in SRDF
+  std::map<std::string, double> start_map;
+  jmg->getVariableDefaultPositions("home", start_map);
   Config start;
-  state.copyJointGroupPositions(jmg, start);
+  for (const auto& name : jmg->getActiveJointModelNames()) start.push_back(start_map[name]);
   std::map<std::string, double> goal_map;
   jmg->getVariableDefaultPositions("goal_a", goal_map);
   Config goal;
@@ -302,8 +307,10 @@ int main(int argc, char** argv) {
   const double goalBias {0.05}; // use goal pose how often
   const double checkRes {.02}; // fine checking between node. clean number
   const double golTol {0.05}; // how close to goal before counting as solved
-  const int maxIter {15000}; // Max iter before no path found
-  const double radius {0.75}; // 1.5x stepsize
+  const int maxIter {50000}; // Safety check for Timer error
+  const double radius {1.50}; // 1.5x stepsize
+  const double timeBudgetMs {1000.0}; // max time for RRT*
+
   // BENCHMARK
   auto runRRT = [&](unsigned seed) -> RunResult {
     rng.seed(seed); // different seed each run
@@ -320,8 +327,15 @@ int main(int argc, char** argv) {
     bool reached {false};
     std::vector<int> neighbors {};
     int closestNeighbor {};
+    std::vector<int> goalNodes {}; // goal idx
+    std::vector<double> goalTimes {}; // goal times
+    std::vector<double> goalCosts {}; // goal costs
+    int iter {0}; 
 
-    for (int iter{0}; iter<maxIter; iter++){
+    for (; iter<maxIter; iter++){
+      double elapsedMs {std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count()};
+      if (elapsedMs >= timeBudgetMs) {break;}
+
       randNode = sample(rng, bounds, goal, goalBias); // random pose gen
       idx = nearest(randNode, tree); // nearest node find
       newNode = steer(tree[idx].q, randNode, stepSize); // random pose -> pose to add
@@ -333,52 +347,87 @@ int main(int argc, char** argv) {
         tree.push_back({newNode, closestNeighbor, tree[closestNeighbor].cost + getDist(newNode, tree[closestNeighbor].q), fk(newNode)});
         rewire(newNode, tree, neighbors, checkRes);
       }
-      if (tree.size() % 50 == 0) {publishTree();}
       if (getDist(goal, newNode) <= golTol) {
-        // GOAL FOUND
-        std::vector<Config> goalPath {};
-        RCLCPP_INFO(node->get_logger(), "Goal reached at iter %d, tree size %zu, path cost %.3f rad",
-              iter, tree.size(), tree.back().cost);
+        // GOAL FOUND. bookmark
+        goalNodes.push_back(static_cast<int>(tree.size()) - 1);
+        goalTimes.push_back(elapsedMs);
+        goalCosts.push_back(tree.back().cost);
         reached = true;
-  
-        int goalIdx {static_cast<int>(tree.size()) - 1};
-        goalPath = extractPath(tree, goalIdx); //return full path
-        itersUsed = iter + 1;           
-        waypointsUsed = goalPath.size();        
-        RCLCPP_INFO(node->get_logger(), "path has %zu waypoints", goalPath.size());
-        RCLCPP_INFO(node->get_logger(), "first = %s", str(goalPath.front()).c_str());
-        RCLCPP_INFO(node->get_logger(), "last  = %s", str(goalPath.back()).c_str());
-        break;
       }
     }
-    auto t1 = std::chrono::steady_clock::now();  
+
+    auto t1 = std::chrono::steady_clock::now(); 
     double ms {std::chrono::duration<double, std::milli>(t1 - t0).count()}; 
+    itersUsed = iter;
+    double bestCost {}; 
+    double firstMs {};  
+    double firstCost {};
     if (!reached) {
-      RCLCPP_INFO(node->get_logger(), "No path found after %d iterations, tree size %zu", maxIter, tree.size());
+      RCLCPP_INFO(node->get_logger(), "No path found within 1s");
+    } else {
+      std::vector<Config> goalPath {};
+      firstMs = goalTimes[0]; 
+      firstCost = goalCosts[0];
+      bestCost = std::numeric_limits<double>::infinity(); 
+
+      // find cheapest goal path
+      for (int g : goalNodes) {            
+        std::vector<Config> path {extractPath(tree, g)};
+        double c {}; 
+        for (size_t k {1}; k < path.size(); k++) { 
+          c += getDist(path[k - 1], path[k]);  
+        }        
+        if (c < bestCost) {  
+          bestCost = c;
+          goalPath = path;
+        } 
+      } 
+
+      // print to compare first goal found with best
+      RCLCPP_INFO(node->get_logger(), "First goal time & cost: %.3f %.3f",
+                  goalTimes[0] , goalCosts[0]);   
+      RCLCPP_INFO(node->get_logger(), "Best path cost: %.3f rad (%zu goal nodes)", 
+                  bestCost, goalNodes.size()); 
+
+      waypointsUsed = goalPath.size();        
+      RCLCPP_INFO(node->get_logger(), "path has %zu waypoints", goalPath.size());
+      RCLCPP_INFO(node->get_logger(), "first = %s", str(goalPath.front()).c_str());
+      RCLCPP_INFO(node->get_logger(), "last  = %s", str(goalPath.back()).c_str());
+
     }
-    return {reached, itersUsed, tree.size(), reached ? tree.back().cost : 0.0, waypointsUsed, ms}; 
+    return {reached, itersUsed, tree.size(), bestCost, waypointsUsed, ms,
+            firstMs, firstCost, goalNodes.size()}; 
   }; 
- 
+
   // 10 seeds
-  std::string csvPath {std::string(std::getenv("HOME")) + "/projects/rbe550FinalProj/results/benchmarks/rrtOnly.csv"};
+  std::string csvPath {std::string(std::getenv("HOME")) + "/projects/rbe550FinalProj/results/benchmarks/rrtStar.csv"};
   std::ofstream csv(csvPath);
   if (!csv) {
     RCLCPP_ERROR(node->get_logger(), "Could not open %s (does the folder exist?)", csvPath.c_str());
   }
-  csv << "seed,success,iters,tree_size,waypoints,path_cost_rad,planning_time_ms\n";
+  csv << "seed,success,iters,tree_size,goal_nodes,first_goal_ms,first_cost_rad,"
+         "final_cost_rad,improvement_pct,waypoints,total_ms\n";
+  double sumFirst {0.0}, sumFinal {0.0}; 
+  int nSuccess {0};      
   for (unsigned seed {1}; seed <= 10; seed++) {
     RunResult r {runRRT(seed)};
-    RCLCPP_INFO(node->get_logger(), "seed %u: success=%d iters=%d tree=%zu waypoints=%zu cost=%.3f rad time=%.1f ms",
-          seed, r.success, r.iters, r.treeSize, r.waypoints, r.cost, r.ms);
+    double improvePct {r.success ? 100.0 * (r.firstCost - r.cost) / r.firstCost : 0.0};
+    RCLCPP_INFO(node->get_logger(),
+          "seed %u: success=%d iters=%d tree=%zu goals=%zu first=%.3f rad @ %.1f ms final=%.3f rad (-%.1f%%)", 
+          seed, r.success, r.iters, r.treeSize, r.goalCount, r.firstCost, r.firstMs, r.cost, improvePct);
     csv << seed << "," << r.success << "," << r.iters << "," << r.treeSize << ","
-        << r.waypoints << "," << r.cost << "," << r.ms << "\n";
+        << r.goalCount << "," << r.firstMs << "," << r.firstCost << ","  
+        << r.cost << "," << improvePct << "," << r.waypoints << "," << r.ms << "\n"; 
+    if (r.success) { sumFirst += r.firstCost; sumFinal += r.cost; nSuccess++; } 
   }
   csv.close();
   RCLCPP_INFO(node->get_logger(), "Saved to %s", csvPath.c_str());
- 
+  if (nSuccess > 0) { 
+    RCLCPP_INFO(node->get_logger(), "SUMMARY: %d/10 success, mean first cost %.3f, mean final cost %.3f rad", 
+          nSuccess, sumFirst / nSuccess, sumFinal / nSuccess); 
+  }
   publishTree();
-  rclcpp::sleep_for(std::chrono::seconds(2)); // just to make sure tree publishes
- 
+  rclcpp::sleep_for(std::chrono::seconds(2));
   rclcpp::shutdown();
   spinner.join();
   return 0;
