@@ -309,7 +309,7 @@ int main(int argc, char** argv) {
   const double golTol {0.05}; // how close to goal before counting as solved
   const int maxIter {50000}; // Safety check for Timer error
   const double radius {1.50}; // 1.5x stepsize
-  const double timeBudgetMs {1000.0}; // max time for RRT*
+  const double timeBudgetMs {2000.0}; // max time for RRT*
 
   // BENCHMARK
   auto runRRT = [&](unsigned seed) -> RunResult {
@@ -339,7 +339,8 @@ int main(int argc, char** argv) {
       randNode = sample(rng, bounds, goal, goalBias); // random pose gen
       idx = nearest(randNode, tree); // nearest node find
       newNode = steer(tree[idx].q, randNode, stepSize); // random pose -> pose to add
-  
+      if (getDist(newNode, tree[idx].q) < 1e-3) {continue;} // goal duplicate fix
+
       if (!edgeValid(newNode, tree[idx].q, checkRes)){continue;}
       else { // find closest, put that in, rewire neighbors
         neighbors = nearbyNodes(newNode, tree, radius);
@@ -400,7 +401,7 @@ int main(int argc, char** argv) {
   }; 
 
   // 10 seeds
-  std::string csvPath {std::string(std::getenv("HOME")) + "/projects/rbe550FinalProj/results/benchmarks/rrtStar.csv"};
+  std::string csvPath {std::string(std::getenv("HOME")) + "/projects/rbe550FinalProj/results/benchmarks/rrtStar_r1.5_noGoalDupe_twoSec.csv"};
   std::ofstream csv(csvPath);
   if (!csv) {
     RCLCPP_ERROR(node->get_logger(), "Could not open %s (does the folder exist?)", csvPath.c_str());
