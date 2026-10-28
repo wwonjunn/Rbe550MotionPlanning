@@ -162,9 +162,11 @@ int main(int argc, char** argv) {
     bounds.emplace_back(b.min_position_, b.max_position_);
   }
  
-  // Start = current state. Goal = goal_a hard coded in SRDF
+  // Start = home hard coded in SRDF (not current state, so benchmarks are repeatable). Goal = goal_a hard coded in SRDF
+  std::map<std::string, double> start_map;
+  jmg->getVariableDefaultPositions("home", start_map);
   Config start;
-  state.copyJointGroupPositions(jmg, start);
+  for (const auto& name : jmg->getActiveJointModelNames()) start.push_back(start_map[name]);
   std::map<std::string, double> goal_map;
   jmg->getVariableDefaultPositions("goal_a", goal_map);
   Config goal;

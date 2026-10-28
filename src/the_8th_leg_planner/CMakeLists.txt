@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
 
 add_executable(rrt_planner src/rrt_planner.cpp)
 target_include_directories(rrt_planner PUBLIC
@@ -23,6 +24,7 @@ ${rclcpp_TARGETS}
 ${moveit_core_TARGETS}
 ${moveit_ros_planning_TARGETS}
 ${visualization_msgs_TARGETS}
+${moveit_ros_planning_interface_TARGETS}
 )
 
 add_executable(rrt_planner_star src/rrt_planner_star.cpp)
@@ -36,12 +38,10 @@ ${rclcpp_TARGETS}
 ${moveit_core_TARGETS}
 ${moveit_ros_planning_TARGETS}
 ${visualization_msgs_TARGETS}
+${moveit_ros_planning_interface_TARGETS}
 )
 
 install(TARGETS rrt_planner rrt_planner_star
-DESTINATION lib/${PROJECT_NAME})
-
-install(TARGETS rrt_planner
 DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
